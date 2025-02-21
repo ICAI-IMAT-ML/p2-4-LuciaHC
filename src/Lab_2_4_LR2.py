@@ -13,6 +13,9 @@ class LinearRegressor:
     def __init__(self):
         self.coefficients = None
         self.intercept = None
+        self.loss_history = []
+        self.history_coef = []
+        self.history_inter = []
 
     """
     This next "fit" function is a general function that either calls the *fit_multiple* code that
@@ -98,10 +101,14 @@ class LinearRegressor:
             error = predictions - y
             gradient = np.dot(error,X)
             self.intercept -= (learning_rate/m)*gradient[0]
-            self.coefficients -= (learning_rate/m)*gradient[1]
+            self.history_inter.append(self.intercept)
+
+            self.coefficients -= (learning_rate/m)*gradient[1:]
+            self.history_coef.append(self.coefficients)
 
             if epoch % 1000 == 0:
-                mse = (1/m)*(sum(error))**2
+                mse = (1/m)*(sum(error**2))
+                self.loss_history.append(mse)
                 print(f"Epoch {epoch}: MSE = {mse}")
 
     def predict(self, X):
@@ -147,7 +154,7 @@ def evaluate_regression(y_true, y_pred):
     y_mean = np.mean(y_true)
     RSS = np.sum((y_true - y_pred) ** 2)
     TSS = np.sum((y_true - y_mean) ** 2)
-    r_squared = 1 - (RSS / TSS) if TSS != 0 else 0  
+    r_squared = 1 - (RSS / TSS) if TSS != 0 else float('nan') 
 
     # Root Mean Squared Error
     rmse = np.sqrt(np.mean((y_true - y_pred) ** 2))
@@ -172,19 +179,19 @@ def one_hot_encode(X, categorical_indices, drop_first=False):
         np.ndarray: Transformed array with one-hot encoded columns.
     """
     X_transformed = X.copy()
+    X_transformed = np.delete(X_transformed,categorical_indices,1)
     for index in sorted(categorical_indices, reverse=True):
         # TODO: Extract the categorical column
         categorical_column = X[:, index]
 
-        unique_values = set(categorical_column)
+        unique_values = np.unique(categorical_column)
 
-        one_hot = np.array([[ True if y == x else False for y in unique_values ] for x in categorical_column])
+        one_hot = np.array([[1 if y == x else 0 for y in unique_values ] for x in categorical_column])
 
         # Optionally drop the first level of one-hot encoding
         if drop_first:
             one_hot = one_hot[:, 1:]
 
-        X_transformed = np.delete(X_transformed,index,1)
         X_transformed = np.concatenate((one_hot,X_transformed),1)
 
     return X_transformed
